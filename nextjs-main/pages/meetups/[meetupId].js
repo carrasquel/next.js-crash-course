@@ -1,3 +1,4 @@
+import { MongoClient, ObjectId } from 'mongodb';
 import MeetupDetails from "../../components/meetups/MeetupDetails";
 
 function MeetupDetailsPage(props){
@@ -9,36 +10,66 @@ function MeetupDetailsPage(props){
 
 export async function getStaticPaths(){
     // fetch ids anyhow and generate
-    return {
-        paths: [
+    try {
+        const url = "mongodb://localhost:27017/meetups";
+
+        const client = await MongoClient.connect(url);
+        const db = client.db();
+
+        const meetupsCollection = db.collection('meetups');
+        const result = await meetupsCollection.find({}, {_id: 1}).toArray();
+        console.log(result);
+        client.close();
+
+        const paths = result.map(meetup => (
             {
                 params: {
-                    meetupId: "1"
-                }
-            },
-            {
-                params: {
-                    meetupId: "2"
+                    meetupId: meetup._id.toString()
                 }
             }
-        ],
-        fallback: false
-    }   
+        ))
+        
+        return {
+            paths: paths,
+            fallback: false
+        }
+
+    } catch (err) {
+        // 👇️ This runs
+        console.log('Error: ', err.message);
+    }
+   
 }
 
 export async function getStaticProps(context){
     const meetupId = context.params.meetupId;
     console.log(meetupId);
-    return {
-        props: {
-            meetup: {
-                id: 1,
-                title: "First Meetup",
-                image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Panoramic_view_of_Caracas%2C_Venezuela_1900_restored_version.jpg/1280px-Panoramic_view_of_Caracas%2C_Venezuela_1900_restored_version.jpg",
-                address: "C.C. San Ignacio",
-                description: "This is a first meetup!"
+
+    try {
+        const url = "mongodb://localhost:27017/meetups";
+
+        const client = await MongoClient.connect(url);
+        const db = client.db();
+
+        const meetupsCollection = db.collection('meetups');
+        const result = await meetupsCollection.findOne({_id: ObjectId(meetupId)});
+        console.log(result);
+        client.close();
+
+        return {
+            props: {
+                meetup: {
+                    id: result._id.toString(),
+                    title: result.title,
+                    image: result.image,
+                    address: result.address,
+                    description: result.description
+                }
             }
         }
+    } catch (err) {
+        // 👇️ This runs
+        console.log('Error: ', err.message);
     }
 }
 
